@@ -43,6 +43,17 @@ module RASN1
       [asn1_class, pc, id, size]
     end
 
+    # @private
+    def self.build_id2types
+      constructed = self.constructed - [Types::SequenceOf, Types::SetOf]
+      primitives = self.primitives - [Types::Enumerated]
+      ary = (primitives + constructed).select { |type| type.const_defined? :ID }
+                                      .map { |type| [type::ID, type] }
+      @id2types = Hash[ary]
+      @id2types.default = Types::Base
+      @id2types.freeze
+    end
+
     # Give ASN.1 type from a DER string. If ID is unknown, return a {Types::Base}
     # object.
     # @param [String] der
@@ -50,15 +61,7 @@ module RASN1
     # @raise [ASN1Error] +tag+ is out of range
     def self.id2type(der)
       # Define a cache for well-known ASN.1 types
-      unless defined? @id2types
-        constructed = self.constructed - [Types::SequenceOf, Types::SetOf]
-        primitives = self.primitives - [Types::Enumerated]
-        ary = (primitives + constructed).select { |type| type.const_defined? :ID }
-                                        .map { |type| [type::ID, type] }
-        @id2types = Hash[ary]
-        @id2types.default = Types::Base
-        @id2types.freeze
-      end
+      build_id2types unless defined? @id2types
 
       asn1class, pc, id, = self.decode_identifier_octets(der)
       # cache_id: check versus class and 5 LSB bits
