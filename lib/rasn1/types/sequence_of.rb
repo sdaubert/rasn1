@@ -63,8 +63,13 @@ module RASN1
       # @see Base#initialize
       def initialize(of_type, options={})
         super(options)
+        # A sequence always has a value
+        @no_value = false
         @of_type = of_type
-        @value = []
+      end
+
+      def void_value
+        []
       end
 
       def initialize_copy(other)
@@ -79,7 +84,7 @@ module RASN1
         if of_type_class < Primitive
           raise ASN1Error, 'object to add should be an Array' unless obj.is_a?(Array)
 
-          @value += obj.map { |item| of_type_class.new(item) }
+          @value += obj.map { |item| of_type_class.new(value: item) }
         elsif composed_of_type?
           raise ASN1Error, 'object to add should be an Array' unless obj.is_a?(Array)
 
@@ -157,7 +162,7 @@ module RASN1
                  elsif of_type_class < Model
                    of_type_class.new
                  else
-                   of_type_class.new(:t)
+                   of_type_class.new
                  end
           nb_bytes += type.parse!(der[nb_bytes, der.length])
           @value << type

@@ -9,13 +9,15 @@ module RASN1
     class Any < Base
       # @return [String] DER-formated string
       def to_der
-        case @value
-        when Base, Model
-          @value.to_der
-        when nil
+        if @no_value
           optional? ? '' : Null.new.to_der
         else
-          @value.to_s
+          case @value
+          when Base, Model
+            @value.to_der
+          else
+            @value.to_s
+          end
         end
       end
 
@@ -25,7 +27,7 @@ module RASN1
       # @param [Boolean] ber if +true+, accept BER encoding
       # @return [Integer] total number of parsed bytes
       def parse!(der, ber: false)
-        if der.nil? || der.empty?
+        if der.empty?
           return 0 if optional?
 
           raise ASN1Error, 'Expected ANY but get nothing'
@@ -35,7 +37,12 @@ module RASN1
         total_length, = get_data(der[id_size..-1], ber)
         total_length += id_size
 
-        @value = der[0, total_length]
+        if total_length.positive?
+          @value = der[0, total_length]
+          @no_value = false
+        else
+          @no_value = true
+        end
 
         total_length
       end
@@ -43,8 +50,8 @@ module RASN1
       def inspect(level=0)
         lvl = level >= 0 ? level : 0
         str = '  ' * lvl
-        str << "#{@name} " unless @name.nil?
-        str << if @value.nil?
+        str << "#{@name} " unless @name.to_s.empty?
+        str << if @no_value
                  '(ANY) NULL'
                elsif @value.is_a?(OctetString) || @value.is_a?(BitString)
                  "(ANY) #{@value.type}: #{value.value.inspect}"

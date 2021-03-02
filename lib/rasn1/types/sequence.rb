@@ -29,10 +29,15 @@ module RASN1
       # Sequence id value
       ID = 0x10
 
-      # @see Base#initialize
-      def initialize(value_or_options={}, options={})
+      # @see Base#initialize common options to all ASN.1 types
+      def initialize(options={})
         super
-        @value ||= []
+        # A sequence always has a value
+        @no_value = false
+      end
+
+      def void_value
+        []
       end
 
       def initialize_copy(other)

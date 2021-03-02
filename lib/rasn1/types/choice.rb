@@ -36,6 +36,10 @@ module RASN1
       # @return [Integer] index of type in choice value
       attr_accessor :chosen
 
+      def void_value
+        []
+      end
+
       # Set chosen value.
       # @note {#chosen} MUST be set before calling this method
       # @param [Object] value

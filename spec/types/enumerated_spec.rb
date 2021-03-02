@@ -1,9 +1,7 @@
 require_relative '../spec_helper'
 
 module RASN1::Types
-
   describe Enumerated do
-
     let(:enumerated) { { a: 0, b: 1, c: 2 } }
 
     describe '.type' do
@@ -22,17 +20,17 @@ module RASN1::Types
       end
 
       it 'raises when enum key is absent' do
-        expect { Enumerated.new(:enum) }.to raise_error(RASN1::EnumeratedError,
-                                                        'no enumeration given')
+        expect { Enumerated.new(name: 'enum') }.to raise_error(RASN1::EnumeratedError,
+                                                               'no enumeration given')
       end
 
       it 'raises on unknown default value' do
-        expect { Enumerated.new(enum: enumerated, default: 53)}.
-          to raise_error(RASN1::EnumeratedError, /default value/)
-        expect { Enumerated.new(enum: enumerated, default: :e)}.
-          to raise_error(RASN1::EnumeratedError, /default value/)
-        expect { Enumerated.new(enum: enumerated, default: Object.new)}.
-          to raise_error(TypeError, /default value/)
+        expect { Enumerated.new(enum: enumerated, default: 53) }
+          .to raise_error(RASN1::EnumeratedError, /default value/)
+        expect { Enumerated.new(enum: enumerated, default: :e) }
+          .to raise_error(RASN1::EnumeratedError, /default value/)
+        expect { Enumerated.new(enum: enumerated, default: Object.new) }
+          .to raise_error(TypeError, /default value/)
       end
 
       it 'records integer default value as name' do

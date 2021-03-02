@@ -30,6 +30,10 @@ module RASN1
         'GeneralizedTime'
       end
 
+      def void_value
+        Time.new
+      end
+
       private
 
       def value_to_der

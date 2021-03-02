@@ -11,24 +11,17 @@ module RASN1
       # Integer id value
       ID = 2
 
-      # @overload initialize(options={})
-      #   @option options [Hash] :enum enumeration hash. Keys are names, and values
-      #     are integers.
-      #   @raise [EnumeratedError] +:default+ value is unknown when +:enum+ key is present
-      # @overload initialize(value, options={})
-      #   @param [Object] value value to set for this ASN.1 object
-      #   @option options [Hash] :enum enumeration hash. Keys are names, and values
-      #     are integers. This key is mandatory.
-      #   @raise [EnumeratedError] +:default+ value is unknown when +:enum+ key is present
+      # @option options [Hash] :enum enumeration hash. Keys are names, and values
+      #   are integers.
+      # @raise [EnumeratedError] +:default+ value is unknown when +:enum+ key is present
       # @see Base#initialize common options to all ASN.1 types
-      def initialize(value_or_options={}, options={})
+      def initialize(options={})
+        @enum = options[:enum] || {}
         super
-        @enum = @options[:enum] || {}
-
         return if @enum.empty?
 
         # To ensure @value has the correct type
-        self.value = @value
+        self.value = @value unless @no_value
 
         case @default
         when String, Symbol
@@ -43,25 +36,30 @@ module RASN1
         end
       end
 
+      def void_value
+        @enum.empty? ? 0 : @enum.keys.first
+      end
+
       # @param [Integer,String,Symbol,nil] v
       # @return [void]
       def value=(val)
+        @no_value = false
         case val
         when String, Symbol
           raise EnumeratedError, "#{@name} has no :enum" if @enum.empty?
           raise EnumeratedError, "#{@name}: unknwon enumerated value #{val}" unless @enum.key? val
 
-          @value = val
+          super(val)
         when ::Integer
           if @enum.empty?
-            @value = val
-          elsif @enum.value? val
-            @value = @enum.key(val)
+            super(val)
+          elsif @enum.value?(val)
+            super(@enum.key(val))
           else
             raise EnumeratedError, "#{@name}: #{val} not in enumeration"
           end
         when nil
-          @value = nil
+          @no_value = true
         else
           raise EnumeratedError, "#{@name}: not in enumeration"
         end
@@ -71,9 +69,11 @@ module RASN1
       # @return [Integer]
       def to_i
         if @enum.empty?
-          @value || @default || 0
+          @no_value ? @default || 0 : @value
+        elsif @no_value
+          @enum.key?(@default) ? @enum[@default] : @enum.values.first
         else
-          @enum[@value || @default] || 0
+          @enum[@value]
         end
       end
 

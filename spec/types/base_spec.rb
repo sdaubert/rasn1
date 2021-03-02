@@ -4,7 +4,7 @@ module RASN1::Types
   describe Base do
     describe '#initialize' do
       it 'sets value' do
-        base = Base.new('value')
+        base = Base.new(value: 'value')
         expect(base.value).to eq('value')
         expect(base.optional?).to be(false)
         expect(base.default).to be(nil)
@@ -56,11 +56,11 @@ module RASN1::Types
       end
 
       it 'should encode long ID' do
-        int = Integer.new(0, implicit: 43)
+        int = Integer.new(value: 0, implicit: 43)
         expect(int.to_der).to eq(binary("\x9f\x2b\x01\x00"))
-        int = Integer.new(1, implicit: 255)
+        int = Integer.new(value: 1, implicit: 255)
         expect(int.to_der).to eq(binary("\x9f\x81\x7f\x01\x01"))
-        int = Integer.new(2, implicit: 60_000)
+        int = Integer.new(value: 2, implicit: 60_000)
         expect(int.to_der).to eq(binary("\x9f\x83\xd4\x60\x01\2"))
       end
     end
@@ -248,7 +248,8 @@ module RASN1::Types
         end
 
         it 'parses a DER string with explicit tagged type with default value' do
-          type = Enumerated.new(explicit: 0, constructed: true,
+          type = Enumerated.new(explicit: 0,
+                                constructed: true,
                                 enum: { 'v1' => 0, 'v2' => 1, 'v3' => 2 },
                                 default: 0)
           type.parse!(binary("\xa0\x03\x0a\x01\x02"))
@@ -289,21 +290,21 @@ module RASN1::Types
 
     describe '#inspect' do
       it 'returns TYPE: VALUE for child classes' do
-        expect(Integer.new.inspect).to eq("INTEGER: nil")
-        expect(Integer.new(value: 0).inspect).to eq("INTEGER: 0")
+        expect(Integer.new.inspect).to eq('INTEGER: nil')
+        expect(Integer.new(value: 0).inspect).to eq('INTEGER: 0')
       end
 
       it 'prints name is object has a name' do
-        expect(Integer.new(name: :int, value: 0).inspect).to eq("int INTEGER: 0")
+        expect(Integer.new(name: :int, value: 0).inspect).to eq('int INTEGER: 0')
       end
 
       it 'gives OPTIONAL information' do
-        expect(Integer.new(value: 0, optional: true).inspect).to eq("INTEGER: 0 OPTIONAL")
+        expect(Integer.new(value: 0, optional: true).inspect).to eq('INTEGER: 0 OPTIONAL')
       end
 
       it 'gives DEFAULT information' do
-        expect(Integer.new(value: 0, default: 0).inspect).to eq("INTEGER: 0 DEFAULT 0")
-        expect(Integer.new(value: 1, default: 0).inspect).to eq("INTEGER: 1 DEFAULT 0")
+        expect(Integer.new(value: 0, default: 0).inspect).to eq('INTEGER: 0 DEFAULT 0')
+        expect(Integer.new(value: 1, default: 0).inspect).to eq('INTEGER: 1 DEFAULT 0')
       end
     end
 

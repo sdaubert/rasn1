@@ -8,6 +8,10 @@ module RASN1
       # Null id value
       ID = 0x05
 
+      def void_value
+        ''
+      end
+
       # @return [String]
       def inspect(level=0)
         str = common_inspect(level)[0..-2] # remove terminal ':'

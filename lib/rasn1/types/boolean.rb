@@ -13,6 +13,10 @@ module RASN1
       # @private
       DER_FALSE = 0
 
+      def void_value
+        false
+      end
+
       private
 
       def value_to_der

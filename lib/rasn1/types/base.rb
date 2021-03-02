@@ -63,14 +63,12 @@ module RASN1
       # Length value for indefinite length
       INDEFINITE_LENGTH = 0x80
 
-      # @return [String,nil]
+      # @return [String]
       attr_reader :name
       # @return [Symbol]
       attr_reader :asn1_class
       # @return [Object,nil] default value, if defined
       attr_reader :default
-      # @return [Object]
-      attr_writer :value
 
       # Get ASN.1 type
       # @return [String]
@@ -97,40 +95,21 @@ module RASN1
         obj
       end
 
-      # @overload initialize(options={})
-      #   @param [Hash] options
-      #   @option options [Symbol] :class ASN.1 class. Default value is +:universal+.
-      #    If +:explicit+ or +:implicit:+ is defined, default value is +:context+.
-      #   @option options [::Boolean] :optional define this tag as optional. Default
-      #     is +false+
-      #   @option options [Object] :default default value (ASN.1 DEFAULT)
-      #   @option options [Object] :value value to set
-      #   @option options [::Integer] :implicit define an IMPLICIT tagged type
-      #   @option options [::Integer] :explicit define an EXPLICIT tagged type
-      #   @option options [::Boolean] :constructed if +true+, set type as constructed.
-      #    May only be used when +:explicit+ is defined, else it is discarded.
-      #   @option options [::String] :name name for this node
-      # @overload initialize(value, options={})
-      #   @param [Object] value value to set for this ASN.1 object
-      #   @param [Hash] options
-      #   @option options [Symbol] :class ASN.1 class. Default value is +:universal+.
-      #    If +:explicit+ or +:implicit:+ is defined, default value is +:context+.
-      #   @option options [::Boolean] :optional define this value as optional. Default
-      #     is +false+
-      #   @option options [Object] :default default value (ASN.1 DEFAULT)
-      #   @option options [::Integer] :implicit define an IMPLICIT tagged type
-      #   @option options [::Integer] :explicit define an EXPLICIT tagged type
-      #   @option options [::Boolean] :constructed if +true+, set type as constructed.
-      #    May only be used when +:explicit+ is defined, else it is discarded.
-      #   @option options [::String] :name name for this node
-      def initialize(value_or_options={}, options={})
+      # @param [Hash] options
+      # @option options [Symbol] :class ASN.1 class. Default value is +:universal+.
+      #  If +:explicit+ or +:implicit:+ is defined, default value is +:context+.
+      # @option options [::Boolean] :optional define this tag as optional. Default
+      #   is +false+
+      # @option options [Object] :default default value (ASN.1 DEFAULT)
+      # @option options [Object] :value value to set
+      # @option options [::Integer] :implicit define an IMPLICIT tagged type
+      # @option options [::Integer] :explicit define an EXPLICIT tagged type
+      # @option options [::Boolean] :constructed if +true+, set type as constructed.
+      #  May only be used when +:explicit+ is defined, else it is discarded.
+      # @option options [::String] :name name for this node
+      def initialize(options={})
         @constructed = nil
-        if value_or_options.is_a? Hash
-          set_options value_or_options
-        else
-          set_options options
-          @value = value_or_options
-        end
+        set_options options
       end
 
       # Used by +#dup+ and +#clone+. Deep copy @value and @default.
@@ -139,12 +118,28 @@ module RASN1
         @default = @default.dup
       end
 
+      # @abstract Used by subclass to set a "void" value that can be handled by real type
+      # @return [Object]
+      def void_value
+        ''
+      end
+
       # Get value or default value
       def value
-        if @value.nil?
+        if @no_value
           @default
         else
           @value
+        end
+      end
+
+      # Set value
+      def value=(val)
+        if val.nil?
+          @no_value = true
+        else
+          @no_value = false
+          @value = val
         end
       end
 
@@ -156,7 +151,7 @@ module RASN1
       # Say if this type is tagged or not
       # @return [::Boolean]
       def tagged?
-        !@tag.nil?
+        defined?(@tag) && !@tag.nil?
       end
 
       # Say if a tagged type is explicit
@@ -199,7 +194,9 @@ module RASN1
       # Get identifier value
       # @return [Integer]
       def id
-        id_value
+        return @id_value if defined? @id_value
+
+        self.class::ID
       end
 
       # @abstract This method SHOULD be partly implemented by subclasses to parse
@@ -266,7 +263,7 @@ module RASN1
       def common_inspect(level)
         lvl = level >= 0 ? level : 0
         str = '  ' * lvl
-        str << "#{@name} " unless @name.nil?
+        str << "#{@name} " unless @name.to_s.empty?
         str << "#{type}:"
       end
 
@@ -288,8 +285,8 @@ module RASN1
         set_optional options[:optional]
         set_default options[:default]
         set_tag options
-        @value = options[:value]
-        @name = options[:name]
+        set_value options[:value]
+        @name = options[:name] || ''
         @options = options
       end
 
@@ -314,6 +311,11 @@ module RASN1
         @default = default
       end
 
+      def set_value(value)
+        @value = value || void_value
+        @no_value = value.nil?
+      end
+
       # handle undocumented option +:tag_value+, used internally by
       # {RASN1.parse} to parse non-universal class tags.
       def set_tag(options)
@@ -334,8 +336,8 @@ module RASN1
       end
 
       def can_build?
-        (@default.nil? || (!@value.nil? && (@value != @default))) &&
-          (!optional? || !@value.nil?)
+        (@default.nil? || (!@no_value && (@value != @default))) &&
+          (!optional? || !@no_value)
       end
 
       def build
@@ -351,12 +353,6 @@ module RASN1
         else
           ''
         end
-      end
-
-      def id_value
-        return @id_value if defined? @id_value
-
-        self.class::ID
       end
 
       def encode_identifier_octets
@@ -403,9 +399,11 @@ module RASN1
       def check_id(der)
         expected_id = encode_identifier_octets
         real_id = der[0, expected_id.size]
+        @no_value = false
         if real_id != expected_id
           if optional?
-            @value = nil
+            @value = void_value
+            @no_value = true
           elsif !@default.nil?
             @value = @default
           else
@@ -450,7 +448,7 @@ module RASN1
       end
 
       def raise_id_error(der)
-        msg = name.nil? ? +'' : +"#{name}: "
+        msg = name.to_s.empty? ? +'' : +"#{name}: "
         msg << "Expected #{self2name} but get #{der2name(der)}"
         raise ASN1Error, msg
       end
