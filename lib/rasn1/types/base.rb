@@ -248,6 +248,12 @@ module RASN1
         (other.class == self.class) && (other.to_der == self.to_der)
       end
 
+      # Say if this element has a value
+      # @return [Boolean]
+      def value?
+        !@no_value
+      end
+
       private
 
       def pc_bit
@@ -336,8 +342,8 @@ module RASN1
       end
 
       def can_build?
-        (@default.nil? || (!@no_value && (@value != @default))) &&
-          (!optional? || !@no_value)
+        (@default.nil? || (value? && (@value != @default))) &&
+          (!optional? || value?)
       end
 
       def build
