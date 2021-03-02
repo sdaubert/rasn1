@@ -34,7 +34,7 @@ module RASN1
     #  -- private tag
     #  PType ::= [PRIVATE 2] EXPLICIT INTEGER
     # These types may be defined as:
-    #  ctype = RASN1::Types::Integer.new(explicit: 0)                      # with explicit, default #asn1_class is :context
+    #  ctype = RASN1::Types::Integer.new(explicit: 0)                      # with explicit/implicit, default #asn1_class defaults to :context
     #  atype = RASN1::Types::Integer.new(explicit: 1, class: :application)
     #  ptype = RASN1::Types::Integer.new(explicit: 2, class: :private)
     # Sometimes, an EXPLICIT type should be CONSTRUCTED. To do that, use +:constructed+
@@ -420,14 +420,9 @@ module RASN1
         length_length = 0
 
         if length == INDEFINITE_LENGTH
-          if primitive?
-            raise ASN1Error, "malformed #{type}: indefinite length " \
-              'forbidden for primitive types'
-          elsif ber
-            raise NotImplementedError, 'indefinite length not supported'
-          else
-            raise ASN1Error, 'indefinite length forbidden in DER encoding'
-          end
+          raise NotImplementedError, 'indefinite length not supported' if ber
+
+          raise ASN1Error, "malformed #{type}: indefinite length forbidden"
         elsif length < INDEFINITE_LENGTH
           data = der[1, length]
         else

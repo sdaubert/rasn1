@@ -138,7 +138,7 @@ module RASN1::Types
         bool = Boolean.new
         der = binary("\x01\x80\xff\x00\x00")
         expect { bool.parse!(der) }.to raise_error(RASN1::ASN1Error).
-          with_message('malformed BOOLEAN: indefinite length forbidden for primitive types')
+          with_message('malformed BOOLEAN: indefinite length forbidden')
       end
 
       context 'raises on indefinite length with constructed types' do
