@@ -14,7 +14,7 @@ module RASN1
 
       # @return [String]
       def inspect(level=0)
-        str = common_inspect(level)[0..-2] # remove terminal ':'
+        str = common_inspect(level, trailing_space: false)[0..-2] # remove terminal ':'
         str << ' OPTIONAL' if optional?
         str
       end
@@ -25,11 +25,13 @@ module RASN1
         ''
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_value(der, ber: false)
         raise ASN1Error, 'NULL should not have content!' if der.length.positive?
 
         @value = nil
       end
+      # rubocop:enable Lint/UnusedMethodArgument
     end
   end
 end

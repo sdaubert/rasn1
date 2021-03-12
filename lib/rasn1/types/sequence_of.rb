@@ -82,28 +82,11 @@ module RASN1
       # @param [Array,Hash, Model]
       def <<(obj)
         if of_type_class < Primitive
-          raise ASN1Error, 'object to add should be an Array' unless obj.is_a?(Array)
-
-          @value += obj.map { |item| of_type_class.new(value: item) }
+          add_primitive obj
         elsif composed_of_type?
-          raise ASN1Error, 'object to add should be an Array' unless obj.is_a?(Array)
-
-          new_value = of_type_class.new
-          @of_type.value.each_with_index do |type, i|
-            type2 = type.dup
-            type2.value = obj[i]
-            new_value.value << type2
-          end
-          @value << new_value
+          add_composed_of_type obj
         elsif of_type_class < Model
-          case obj
-          when Hash
-            @value << of_type_class.new(obj)
-          when of_type_class
-            @value << obj
-          else
-            raise ASN1Error, "object to add should be a #{of_type_class} or a Hash"
-          end
+          add_model obj
         end
       end
 
@@ -121,7 +104,7 @@ module RASN1
       end
 
       def inspect(level=0)
-        str = common_inspect(level)
+        str = common_inspect(level, trailing_space: false)
         str << "\n"
         level = level.abs + 1
         @value.each do |item|
@@ -152,6 +135,7 @@ module RASN1
         @value.map(&:to_der).join
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_value(der, ber: false)
         @value = []
         nb_bytes = 0
@@ -159,8 +143,6 @@ module RASN1
         while nb_bytes < der.length
           type = if composed_of_type? && !@of_type.is_a?(Class)
                    @of_type.dup
-                 elsif of_type_class < Model
-                   of_type_class.new
                  else
                    of_type_class.new
                  end
@@ -168,9 +150,39 @@ module RASN1
           @value << type
         end
       end
+      # rubocop:enable Lint/UnusedMethodArgument
 
       def explicit_type
         self.class.new(self.of_type)
+      end
+
+      def add_primitive(obj)
+        raise ASN1Error, 'object to add should be an Array' unless obj.is_a?(Array)
+
+        @value += obj.map { |item| of_type_class.new(value: item) }
+      end
+
+      def add_model(obj)
+        case obj
+        when Hash
+          @value << of_type_class.new(obj)
+        when of_type_class
+          @value << obj
+        else
+          raise ASN1Error, "object to add should be a #{of_type_class} or a Hash"
+        end
+      end
+
+      def add_composed_of_type(obj)
+        raise ASN1Error, 'object to add should be an Array' unless obj.is_a?(Array)
+
+        new_value = of_type_class.new
+        @of_type.value.each_with_index do |type, i|
+          type2 = type.dup
+          type2.value = obj[i]
+          new_value.value << type2
+        end
+        @value << new_value
       end
     end
   end

@@ -158,14 +158,14 @@ module RASN1
       # @return [::Boolean,nil] return +nil+ if not tagged, return +true+
       #   if explicit, else +false+
       def explicit?
-        !defined?(@tag) ? nil : @tag == :explicit
+        defined?(@tag) ? @tag == :explicit : nil
       end
 
       # Say if a tagged type is implicit
       # @return [::Boolean,nil] return +nil+ if not tagged, return +true+
       #   if implicit, else +false+
       def implicit?
-        !defined?(@tag) ? nil : @tag == :implicit
+        defined?(@tag) ? @tag == :implicit : nil
       end
 
       # @abstract This method SHOULD be partly implemented by subclasses, which
@@ -209,7 +209,7 @@ module RASN1
       def parse!(der, ber: false)
         return 0 unless check_id(der)
 
-        id_size = Types.decode_identifier_octets(der).last
+        id_size = Types.decode_id(der).last
         total_length, data = get_data(der[id_size..-1], ber)
         total_length += id_size
         if explicit?
@@ -235,7 +235,7 @@ module RASN1
       # @return [String]
       def inspect(level=0)
         str = common_inspect(level)
-        str << " #{value.inspect}"
+        str << value.inspect
         str << ' OPTIONAL' if optional?
         str << " DEFAULT #{@default}" unless @default.nil?
         str
@@ -266,11 +266,13 @@ module RASN1
         end
       end
 
-      def common_inspect(level)
+      def common_inspect(level, trailing_space: true)
         lvl = level >= 0 ? level : 0
         str = '  ' * lvl
         str << "#{@name} " unless @name.to_s.empty?
         str << "#{type}:"
+        str << ' ' if trailing_space
+        str
       end
 
       def value_to_der
@@ -282,9 +284,11 @@ module RASN1
         end
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_value(der, ber: false)
         @value = der
       end
+      # rubocop:enable Lint/UnusedMethodArgument
 
       def set_options(options)
         set_class options[:class]
@@ -406,7 +410,9 @@ module RASN1
         expected_id = encode_identifier_octets
         real_id = der[0, expected_id.size]
         @no_value = false
-        if real_id != expected_id
+        if real_id == expected_id
+          true
+        else
           if optional?
             @value = void_value
             @no_value = true
@@ -416,25 +422,29 @@ module RASN1
             raise_id_error(der)
           end
           false
-        else
-          true
         end
+      end
+
+      def get_real_length(der, length_first_byte)
+        length_length = length_first_byte & 0x7f
+        length = der[1, length_length].unpack('C*')
+                                      .reduce(0) { |len, b| (len << 8) | b }
+
+        [length, length_length]
       end
 
       def get_data(der, ber)
         length = der.unpack1('C').to_i
-        length_length = 0
 
         if length == INDEFINITE_LENGTH
           raise NotImplementedError, 'indefinite length not supported' if ber
 
           raise ASN1Error, "malformed #{type}: indefinite length forbidden"
         elsif length < INDEFINITE_LENGTH
+          length_length = 0
           data = der[1, length]
         else
-          length_length = length & 0x7f
-          length = der[1, length_length].unpack('C*')
-                                        .reduce(0) { |len, b| (len << 8) | b }
+          length, length_length = get_real_length(der, length)
           data = der[1 + length_length, length]
         end
 
@@ -472,9 +482,7 @@ module RASN1
 
         asn1_class, pc, id, id_size = Types.decode_identifier_octets(der)
         name = +"#{asn1_class.to_s.upcase} #{pc.to_s.upcase}"
-        type =  Types.constants.map { |c| Types.const_get(c) }
-                     .select { |klass| klass < Primitive || klass < Constructed }
-                     .find { |klass| klass::ID == id }
+        type =  (Types.constructed | Types.primitives).find { |klass| klass::ID == id }
         name << " #{type.nil? ? '0x%X (0x%s)' % [id, bin2hex(der[0...id_size])] : type.encoded_type}"
       end
 

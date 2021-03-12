@@ -80,14 +80,19 @@ module RASN1
       private
 
       def int_value_to_der(value)
-        v = value
-        size = v.bit_length / 8 + ((v.bit_length % 8).positive? ? 1 : 0)
+        size, modulus = value.bit_length.divmod(8)
+        size += 1 if modulus.positive?
         size = 1 if size.zero?
-        comp_value = v >= 0 ? v : (~(-v) + 1) & ((1 << (size * 8)) - 1)
+
+        comp_value = value.negative? ? two_complement(value, size) : value
         ary = comp_value.digits(256)
-        # v is > 0 and its MSBit is 1. Add a 0 byte to mark it as positive
-        ary << 0 if v.positive? && (v >> (size * 8 - 1) == 1)
+        # value is > 0 and its MSBit is 1. Add a 0 byte to mark it as positive
+        ary << 0 if value.positive? && (value >> (size * 8 - 1) == 1)
         ary.reverse.pack('C*')
+      end
+
+      def two_complement(value, size)
+        (~(-value) + 1) & ((1 << (size * 8)) - 1)
       end
 
       def value_to_der
@@ -101,12 +106,14 @@ module RASN1
         end
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_int_value(der, ber: false)
         ary = der.unpack('C*')
         v = ary.reduce(0) { |len, b| (len << 8) | b }
         v = -((~v & ((1 << v.bit_length) - 1)) + 1) if ary[0] & 0x80 == 0x80
         v
       end
+      # rubocop:enable Lint/UnusedMethodArgument
 
       def der_to_value(der, ber: false)
         @value = der_to_int_value(der, ber: ber)

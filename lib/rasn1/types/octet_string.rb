@@ -17,7 +17,7 @@ module RASN1
 
       def inspect(level=0)
         str = common_inspect(level)
-        str << " #{value.inspect}"
+        str << value.inspect
       end
     end
   end

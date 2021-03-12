@@ -1,6 +1,7 @@
-module Binary
+# frozen_string_literal: true
 
+module Binary
   def binary(str)
-    str.force_encoding('BINARY')
+    str.dup.force_encoding('BINARY')
   end
 end

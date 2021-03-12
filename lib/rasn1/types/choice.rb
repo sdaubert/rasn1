@@ -95,11 +95,11 @@ module RASN1
       end
 
       def inspect(level=0)
-        str = common_inspect(level)
-        str << if !defined? @chosen
-                 ' not chosen!'
-               else
+        str = common_inspect(level, trailing_space: false)
+        str << if defined? @chosen
                  "\n#{@value[@chosen].inspect(level + 1)}"
+               else
+                 ' not chosen!'
                end
       end
 

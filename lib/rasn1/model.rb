@@ -481,14 +481,7 @@ module RASN1
               when Types::SequenceOf
                 my_element.value.map { |el| private_to_h(el) }
               when Types::Sequence
-                hsh = {}
-                my_element.value.each do |el|
-                  next if el.optional? && !el.value?
-
-                  name = el.is_a?(Model) ? @elements.key(el) : el.name
-                  hsh[name] = private_to_h(el)
-                end
-                hsh
+                sequence_to_h(my_element)
               else
                 my_element.value
               end
@@ -497,6 +490,17 @@ module RASN1
       else
         value
       end
+    end
+
+    def sequence_to_h(seq)
+      hsh = {}
+      seq.value.each do |el|
+        next if el.optional? && !el.value?
+
+        name = el.is_a?(Model) ? @elements.key(el) : el.name
+        hsh[name] = private_to_h(el)
+      end
+      hsh
     end
   end
 end

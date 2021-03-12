@@ -25,6 +25,7 @@ module RASN1
         ids.flatten.pack('C*')
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_value(der, ber: false)
         bytes = der.unpack('C*')
 
@@ -44,6 +45,7 @@ module RASN1
 
         @value = ids.join('.')
       end
+      # rubocop:enable Lint/UnusedMethodArgument
     end
   end
 end

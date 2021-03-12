@@ -13,7 +13,7 @@ module RASN1
       def inspect(level=0)
         case @value
         when Array
-          str = common_inspect(level)
+          str = common_inspect(level, trailing_space: false)
           str << "\n"
           level = level.abs + 1
           @value.each do |item|

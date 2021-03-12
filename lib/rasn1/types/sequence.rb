@@ -75,6 +75,7 @@ module RASN1
         end
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_value(der, ber: false)
         if @value.is_a?(Array) && !@value.empty?
           nb_bytes = 0
@@ -86,6 +87,7 @@ module RASN1
           der.length
         end
       end
+      # rubocop:enable Lint/UnusedMethodArgument
     end
   end
 end

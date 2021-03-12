@@ -37,6 +37,7 @@ module RASN1
         @value.getutc.strftime('%y%m%d%H%M%SZ')
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_value(der, ber: false)
         format = case der.size
                  when 11
@@ -54,6 +55,7 @@ module RASN1
         century = (Time.now.year / 100).to_s
         @value = DateTime.strptime(century + der, format).to_time
       end
+      # rubocop:enable Lint/UnusedMethodArgument
     end
   end
 end

@@ -45,72 +45,79 @@ module RASN1
         end
       end
 
+      # rubocop:disable Lint/UnusedMethodArgument
       def der_to_value(der, ber: false)
-        utc_offset_forced = false
         date_hour, fraction = der.split('.')
         date_hour = date_hour.to_s
         fraction = fraction.to_s
 
+        utc_offset_forced = fix_date_hour_and_fraction(date_hour, fraction)
+        format, frac_base = get_format(date_hour, der)
+
+        @value = DateTime.strptime(date_hour, format).to_time
+        # local time format.
+        # Check DST. There may be a shift of one hour...
+        fix_dst if utc_offset_forced
+        @value += ".#{fraction}".to_r * frac_base unless fraction.nil?
+      end
+      # rubocop:enable Lint/UnusedMethodArgument
+
+      def fix_date_hour_and_fraction(date_hour, fraction)
         if fraction.empty?
-          if (date_hour[-1] != 'Z') && (date_hour !~ /[+-]\d+$/)
+          unless date_hour.match?(/(?:[+-]\d+|Z)$/)
             # If not UTC, have to add offset with UTC to force
             # DateTime#strptime to generate a local time. But this difference
             # may be errored because of DST.
             date_hour << Time.now.strftime('%z')
-            utc_offset_forced = true
+            true
           end
-        elsif fraction[-1] == 'Z'
-          fraction = fraction[0...-1]
+        elsif fraction.end_with?('Z')
+          fraction.slice!(-1)
           date_hour << 'Z'
+          false
         else
           match = fraction.match(/(\d+)([+-]\d+)/)
           if match
             # fraction contains fraction and timezone info. Split them
-            fraction = match[1]
+            fraction.replace(match[1])
             date_hour << match[2]
+            false
           else
             # fraction only contains fraction.
             # Have to add offset with UTC to force DateTime#strptime to
             # generate a local time. But this difference may be errored
             # because of DST.
             date_hour << Time.now.strftime('%z')
-            utc_offset_forced = true
+            true
           end
         end
-        format = case date_hour.size
-                 when 11
-                   frac_base = 60 * 60
-                   '%Y%m%d%HZ'
-                 when 13
-                   frac_base = 60
-                   '%Y%m%d%H%MZ'
-                 when 15
-                   if date_hour[-1] == 'Z'
-                     frac_base = 1
-                     '%Y%m%d%H%M%SZ'
-                   else
-                     frac_base = 60 * 60
-                     '%Y%m%d%H%z'
-                   end
-                 when 17
-                   frac_base = 60
-                   '%Y%m%d%H%M%z'
-                 when 19
-                   frac_base = 1
-                   '%Y%m%d%H%M%S%z'
-                 else
-                   frac_base = 0
-                   prefix = @name.nil? ? type : "tag #{@name}"
-                   raise ASN1Error, "#{prefix}: unrecognized format: #{der}"
-                 end
-        @value = DateTime.strptime(date_hour, format).to_time
-        # local time format.
-        # Check DST. There may be a shift of one hour...
-        if utc_offset_forced
-          compare_time = Time.new(*@value.to_a[0..5].reverse)
-          @value = compare_time if compare_time.utc_offset != @value.utc_offset
+      end
+
+      def get_format(date_hour, der)
+        case date_hour.size
+        when 11
+          ['%Y%m%d%HZ', 60 * 60]
+        when 13
+          ['%Y%m%d%H%MZ', 60]
+        when 15
+          if date_hour[-1] == 'Z'
+            ['%Y%m%d%H%M%SZ', 1]
+          else
+            ['%Y%m%d%H%z', 60 * 60]
+          end
+        when 17
+          ['%Y%m%d%H%M%z', 60]
+        when 19
+          ['%Y%m%d%H%M%S%z', 1]
+        else
+          prefix = @name.nil? ? type : "tag #{@name}"
+          raise ASN1Error, "#{prefix}: unrecognized format: #{der}"
         end
-        @value += ".#{fraction}".to_r * frac_base unless fraction.nil?
+      end
+
+      def fix_dst
+        compare_time = Time.new(*@value.to_a[0..5].reverse)
+        @value = compare_time if compare_time.utc_offset != @value.utc_offset
       end
     end
   end

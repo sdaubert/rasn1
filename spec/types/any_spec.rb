@@ -1,4 +1,5 @@
-# coding: utf-8
+# frozen_string_literal: true
+
 require_relative '../spec_helper'
 
 class AnyModel < RASN1::Model
@@ -78,16 +79,16 @@ module RASN1::Types
       let(:any) { Any.new }
 
       it 'gets a String with NULL when value is nil' do
-        expect(any.inspect).to eq('(ANY) NULL')
+        expect(any.inspect).to eq('ANY: NULL')
       end
 
       it 'gets a String with real type' do
         any.value = OctetString.new(value: '1234')
-        expect(any.inspect).to eq('(ANY) OCTET STRING: "1234"')
+        expect(any.inspect).to eq('ANY: (OCTET STRING) "1234"')
         any.value = BitString.new(value: '1235', bit_length: 30)
-        expect(any.inspect).to eq('(ANY) BIT STRING: "1235"')
+        expect(any.inspect).to eq('ANY: (BIT STRING) "1235"')
         any.value = Integer.new(value: 45)
-        expect(any.inspect).to eq('(ANY) INTEGER: 45')
+        expect(any.inspect).to eq('ANY: (INTEGER) 45')
       end
 
       it 'gets a String with an unknown type' do

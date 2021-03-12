@@ -33,7 +33,7 @@ module RASN1
           raise ASN1Error, 'Expected ANY but get nothing'
         end
 
-        id_size = Types.decode_identifier_octets(der).last
+        id_size = Types.decode_id(der).last
         total_length, = get_data(der[id_size..-1], ber)
         total_length += id_size
 
@@ -48,17 +48,15 @@ module RASN1
       end
 
       def inspect(level=0)
-        lvl = level >= 0 ? level : 0
-        str = '  ' * lvl
-        str << "#{@name} " unless @name.to_s.empty?
+        str = common_inspect(level)
         str << if @no_value
-                 '(ANY) NULL'
+                 'NULL'
                elsif @value.is_a?(OctetString) || @value.is_a?(BitString)
-                 "(ANY) #{@value.type}: #{value.value.inspect}"
+                 "(#{@value.type}) #{value.value.inspect}"
                elsif @value.class < Base
-                 "(ANY) #{@value.type}: #{value.value}"
+                 "(#{@value.type}) #{value.value}"
                else
-                 "ANY: #{value.to_s.inspect}"
+                 value.to_s.inspect
                end
       end
     end

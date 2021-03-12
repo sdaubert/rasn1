@@ -32,7 +32,7 @@ module RASN1
   end
 
   # Parse a DER/BER string without checking a model
-  # @note If you want to check ASN.1 grammary, you should define a {Model}
+  # @note If you want to check ASN.1 grammar, you should define a {Model}
   #       and use {Model#parse}.
   # @note This method will never decode SEQUENCE OF or SET OF objects, as these
   #       ones use the same encoding as SEQUENCE and SET, respectively.
@@ -45,19 +45,19 @@ module RASN1
     root = nil
     until der.empty?
       type = Types.id2type(der)
-      type.parse!(der, ber: ber)
+      size = type.parse!(der, ber: ber)
       root = type if root.nil?
 
-      if [Types::Sequence, Types::Set].include? type.class
+      if [Types::Sequence, Types::Set].include?(type.class)
         subder = type.value
-        ary = []
+        type.value = []
         until subder.empty?
-          ary << self.parse(subder)
-          subder = subder[ary.last.to_der.size..-1]
+          el = self.parse(subder, ber: ber)
+          type.value << el
+          subder = subder[el.to_der.size..-1]
         end
-        type.value = ary
       end
-      der = der[type.to_der.size..-1]
+      der = der[size..-1]
     end
     root
   end
